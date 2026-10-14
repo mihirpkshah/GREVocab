@@ -1,0 +1,112 @@
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem;
+  color: #1f2937;
+}
+
+.app-header h1 {
+  margin-bottom: 0.5rem;
+  font-size: 1.8rem;
+}
+
+.app-header p {
+  margin-top: 0;
+}
+
+.auth-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.user-text {
+  font-size: 0.95rem;
+}
+
+.hint {
+  color: #4b5563;
+}
+
+.stats,
+.mode-switch,
+.card-area {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.mode-switch {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mode-switch button,
+.row-buttons button,
+.grade-buttons button,
+.auth-area button {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.mode-switch button.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.meta {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.row-buttons,
+.grade-buttons {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .app {
+    padding: 0.75rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .mode-switch {
+    flex-direction: column;
+  }
+
+  .mode-switch button,
+  .row-buttons button,
+  .grade-buttons button,
+  .auth-area button {
+    width: 100%;
+  }
+}
