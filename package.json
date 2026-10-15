@@ -12,7 +12,7 @@
   "dependencies": {
     "@firebase/app": "^0.16.3",
     "@firebase/auth": "^1.13.7",
-    "@firebase/database": "^1.1.5",
+    "@firebase/firestore": "^4.9.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

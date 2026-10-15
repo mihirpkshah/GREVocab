@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "archts-tool"
+  },
+  "targets": {
+    "archts-tool": {
+      "hosting": {
+        "grevocab": [
+          "archts-tool-grevocab"
+        ]
+      }
+    }
+  }
+}

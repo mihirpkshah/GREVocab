@@ -68,6 +68,11 @@
   background: #dbeafe;
 }
 
+.grade-buttons button.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;

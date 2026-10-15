@@ -12,16 +12,40 @@ A mobile-friendly React app to learn and review 1000 GRE vocabulary words using 
 - Spaced-repetition quiz mode (`Again`, `Hard`, `Good`, `Easy`)
 - Firebase integration:
   - Google Sign-In only
-  - progress saved to Firebase Realtime Database per user
+  - progress saved to Firebase Firestore per user
+  - all app data scoped under `Tools/GREVocab` in Firestore
 
 ## Firebase setup
 
 1. Create a Firebase project.
 2. Enable **Google** provider in Firebase Authentication.
-3. Enable **Realtime Database**.
+3. Enable **Cloud Firestore**.
 4. Update `src/firebase/firebaseConfig.json` with your Firebase project values.
+5. Optionally set `googleWebClientId` if you need to force a specific OAuth client.
 
 The app uses placeholders by default and will show a setup message until configuration is updated.
+
+### Firestore structure
+
+All user data is written under:
+
+- `Tools` (collection)
+  - `GREVocab` (document)
+    - `users` (subcollection)
+      - `{uid}` (document with `progress`, `user`, `updatedAt`, `scope`)
+
+### Firebase Hosting
+
+This project is configured for Firebase Hosting site:
+
+- `archts-tool-grevocab`
+
+Deploy:
+
+```bash
+npm run build
+firebase deploy --only hosting:grevocab
+```
 
 ## Run locally
 

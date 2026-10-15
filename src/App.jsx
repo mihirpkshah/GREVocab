@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import wordsData from './data/gre-words-1000.json'
 import {
   auth,
-  database,
   provider,
   isConfigured,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-  ref,
-  get,
-  set,
+  loadUserProgress,
+  saveUserProgress,
 } from './firebase/firebase'
 import './App.css'
 
@@ -23,6 +21,100 @@ const defaultReviewState = {
   dueAt: 0,
   attempts: 0,
   correct: 0,
+}
+
+const STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'in',
+  'into',
+  'is',
+  'it',
+  'its',
+  'of',
+  'on',
+  'or',
+  'that',
+  'the',
+  'to',
+  'with',
+])
+
+function tokenizeMeaning(meaning = '') {
+  return meaning
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token && !STOP_WORDS.has(token))
+}
+
+function meaningSimilarityScore(aMeaning, bMeaning) {
+  const aTokens = tokenizeMeaning(aMeaning)
+  const bTokens = tokenizeMeaning(bMeaning)
+
+  if (!aTokens.length || !bTokens.length) return 0
+
+  const aSet = new Set(aTokens)
+  const bSet = new Set(bTokens)
+  let overlap = 0
+  for (const token of aSet) {
+    if (bSet.has(token)) overlap += 1
+  }
+
+  const normalizedOverlap = overlap / Math.max(aSet.size, bSet.size, 1)
+  const lengthBalance =
+    1 - Math.abs(aMeaning.length - bMeaning.length) / Math.max(aMeaning.length, bMeaning.length, 1)
+  const startsSimilarly =
+    aMeaning.slice(0, 2).toLowerCase() === bMeaning.slice(0, 2).toLowerCase() ? 0.1 : 0
+
+  return normalizedOverlap * 2 + Math.max(lengthBalance, 0) * 0.5 + startsSimilarly
+}
+
+function deterministicHash(value) {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 2147483647
+  }
+  return hash
+}
+
+function buildQuizOptions(word, allWords) {
+  if (!word) return []
+
+  const candidates = allWords
+    .filter((entry) => entry.word !== word.word && entry.meaning !== word.meaning)
+    .map((entry) => ({
+      ...entry,
+      score: meaningSimilarityScore(word.meaning, entry.meaning),
+    }))
+    .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
+
+  const distractors = []
+  const usedMeanings = new Set([word.meaning])
+
+  for (const candidate of candidates) {
+    if (!usedMeanings.has(candidate.meaning)) {
+      distractors.push(candidate.meaning)
+      usedMeanings.add(candidate.meaning)
+    }
+    if (distractors.length === 3) break
+  }
+
+  const rawOptions = [word.meaning, ...distractors]
+  return rawOptions
+    .map((meaning) => ({
+      meaning,
+      rank: deterministicHash(`${word.word}|${meaning}`),
+    }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((item) => item.meaning)
 }
 
 function nextReviewState(previous = defaultReviewState, quality, now = Date.now()) {
@@ -67,7 +159,8 @@ function App() {
   const [mode, setMode] = useState('learn')
   const [learnIndex, setLearnIndex] = useState(0)
   const [quizWordIndex, setQuizWordIndex] = useState(0)
-  const [showQuizAnswer, setShowQuizAnswer] = useState(false)
+  const [selectedMeaning, setSelectedMeaning] = useState('')
+  const [isAnswered, setIsAnswered] = useState(false)
   const [progress, setProgress] = useState({})
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(isConfigured)
@@ -82,6 +175,10 @@ function App() {
 
   const currentLearnWord = allWords[learnIndex]
   const currentQuizWord = dueWords[quizWordIndex] || null
+  const currentQuizOptions = useMemo(
+    () => buildQuizOptions(currentQuizWord, allWords),
+    [currentQuizWord, allWords],
+  )
 
   const reviewedCount = useMemo(
     () => Object.keys(progress).filter((word) => progress[word]?.attempts > 0).length,
@@ -89,14 +186,16 @@ function App() {
   )
 
   async function loadProgress(uid) {
-    if (!database) return
-    const snapshot = await get(ref(database, `users/${uid}/progress`))
-    setProgress(snapshot.exists() ? snapshot.val() : {})
+    const cloudProgress = await loadUserProgress(uid)
+    setProgress(cloudProgress)
   }
 
   async function persistProgress(uid, nextProgress) {
-    if (!database || !uid) return
-    await set(ref(database, `users/${uid}/progress`), nextProgress)
+    if (!uid) return
+    await saveUserProgress(uid, nextProgress, {
+      displayName: user?.displayName,
+      email: user?.email,
+    })
   }
 
   async function handleSignIn() {
@@ -120,11 +219,18 @@ function App() {
     }
 
     setProgress(nextProgress)
-    setShowQuizAnswer(false)
+    setSelectedMeaning('')
+    setIsAnswered(false)
 
     if (user?.uid) {
       persistProgress(user.uid, nextProgress)
     }
+  }
+
+  function handleSelectMeaning(meaning) {
+    if (isAnswered) return
+    setSelectedMeaning(meaning)
+    setIsAnswered(true)
   }
 
   useEffect(() => {
@@ -149,6 +255,11 @@ function App() {
       setQuizWordIndex(0)
     }
   }, [dueWords.length, quizWordIndex])
+
+  useEffect(() => {
+    setSelectedMeaning('')
+    setIsAnswered(false)
+  }, [currentQuizWord?.word])
 
   return (
     <main className="app">
@@ -253,8 +364,28 @@ function App() {
                   Due card {quizWordIndex + 1} / {dueWords.length}
                 </p>
                 <h2>{currentQuizWord.word}</h2>
-                {showQuizAnswer ? (
+                <p className="hint">Pick the best meaning. Distractors are chosen to be close in sense.</p>
+                <div className="grade-buttons">
+                  {currentQuizOptions.map((meaningOption) => (
+                    <button
+                      key={meaningOption}
+                      type="button"
+                      className={selectedMeaning === meaningOption ? 'active' : ''}
+                      onClick={() => handleSelectMeaning(meaningOption)}
+                      disabled={isAnswered}
+                    >
+                      {meaningOption}
+                    </button>
+                  ))}
+                </div>
+                {isAnswered ? (
                   <>
+                    <p>
+                      <strong>{selectedMeaning === currentQuizWord.meaning ? 'Correct' : 'Incorrect'}.</strong>{' '}
+                      {selectedMeaning === currentQuizWord.meaning
+                        ? 'Great recall.'
+                        : 'Review the definition carefully.'}
+                    </p>
                     <p>
                       <strong>Meaning:</strong> {currentQuizWord.meaning}
                     </p>
@@ -266,11 +397,11 @@ function App() {
                     </p>
                   </>
                 ) : (
-                  <p className="hint">Try recalling meaning, example, and usage first.</p>
+                  <p className="hint">Answer first, then grade recall strength for spaced repetition.</p>
                 )}
               </article>
 
-              {showQuizAnswer ? (
+              {isAnswered ? (
                 <div className="grade-buttons">
                   <button type="button" onClick={() => handleGrade(0)}>
                     Again
@@ -285,13 +416,7 @@ function App() {
                     Easy
                   </button>
                 </div>
-              ) : (
-                <div className="row-buttons">
-                  <button type="button" onClick={() => setShowQuizAnswer(true)}>
-                    Show answer
-                  </button>
-                </div>
-              )}
+              ) : null}
 
               <div className="row-buttons">
                 <button
