@@ -10,6 +10,9 @@ A mobile-friendly React app to learn and review 1000 GRE vocabulary words using 
   - example
   - usage
 - Spaced-repetition quiz mode (`Again`, `Hard`, `Good`, `Easy`)
+- Progressive Web App (PWA) support:
+  - installable on iPhone (Add to Home Screen)
+  - offline shell caching via service worker
 - Firebase integration:
   - Google Sign-In only
   - progress saved to Firebase Firestore per user
@@ -46,6 +49,12 @@ Deploy:
 npm run build
 firebase deploy --only hosting:grevocab
 ```
+
+### iPhone install
+
+1. Open the deployed app in Safari.
+2. Tap **Share**.
+3. Tap **Add to Home Screen**.
 
 ## Run locally
 
