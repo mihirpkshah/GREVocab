@@ -32,13 +32,6 @@ provider.setCustomParameters({
   prompt: 'select_account',
 })
 
-if (firebaseConfig.googleWebClientId && !firebaseConfig.googleWebClientId.includes('YOUR_')) {
-  provider.setCustomParameters({
-    prompt: 'select_account',
-    client_id: firebaseConfig.googleWebClientId,
-  })
-}
-
 function getUserProgressDoc(uid) {
   if (!firestore || !uid) return null
   return doc(firestore, 'Tools', 'GREVocab', 'users', uid)

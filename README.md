@@ -21,7 +21,7 @@ A mobile-friendly React app to learn and review 1000 GRE vocabulary words using 
 2. Enable **Google** provider in Firebase Authentication.
 3. Enable **Cloud Firestore**.
 4. Update `src/firebase/firebaseConfig.json` with your Firebase project values.
-5. Optionally set `googleWebClientId` if you need to force a specific OAuth client.
+5. Optionally set `googleWebClientId` for project metadata/reference in config.
 
 The app uses placeholders by default and will show a setup message until configuration is updated.
 
